@@ -19,13 +19,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
       :root {
-        --red-900: #5c1414;
-        --red-800: #7a1a1a;
-        --red-700: #951d1d;
-        --red-600: #b52222;
-        --red-500: #d92b2b;
-        --red-100: #fbe4e4;
-        --red-50: #fdf3f3;
+        --blue-900: #14195c;
+        --blue-800: #1c1a7a;
+        --blue-700: #1d2395;
+        --blue-600: #2236b5;
+        --blue-500: #2b42d9;
+        --blue-100: #fbe4e4;
+        --blue-50: #fdf3f3;
         --ink: #221a1a;
         --ink-soft: #413737;
         --paper: #ffffff;
@@ -65,7 +65,7 @@
         font-family: var(--font-body);
       }
       ::selection {
-        background: var(--red-100);
+        background: var(--blue-100);
       }
 
       /* ---------- App shell ---------- */
@@ -77,7 +77,11 @@
       .rail {
         width: 248px;
         flex: 0 0 248px;
-        background: linear-gradient(175deg, var(--red-900), var(--red-700) 78%);
+        background: linear-gradient(
+          175deg,
+          var(--blue-900),
+          var(--blue-700) 78%
+        );
         color: #fff;
         padding: 28px 20px 24px;
         display: flex;
@@ -163,7 +167,7 @@
         width: 42px;
         height: 42px;
         border-radius: 11px;
-        background: var(--red-700);
+        background: var(--blue-700);
         color: #fff;
         border: none;
         align-items: center;
@@ -287,7 +291,7 @@
       }
       .step-btn.active .step-num {
         background: #fff;
-        color: var(--red-700);
+        color: var(--blue-700);
         border-color: #fff;
       }
       .step-btn.done .step-num {
@@ -360,7 +364,7 @@
       .eyebrow {
         font-size: 12px;
         font-weight: 600;
-        color: var(--red-600);
+        color: var(--blue-600);
         margin-bottom: 6px;
       }
 
@@ -433,7 +437,7 @@
       }
       .field input:focus,
       .field textarea:focus {
-        border-color: var(--red-500);
+        border-color: var(--blue-500);
       }
       .field textarea {
         resize: vertical;
@@ -454,8 +458,8 @@
         background: var(--sand);
       }
       .upload-box:hover {
-        border-color: var(--red-500);
-        background: var(--red-50);
+        border-color: var(--blue-500);
+        background: var(--blue-50);
       }
       .upload-thumb {
         width: 46px;
@@ -489,7 +493,7 @@
       .clear-link {
         background: none;
         border: none;
-        color: var(--red-600);
+        color: var(--blue-600);
         font-size: 11.5px;
         font-weight: 600;
         cursor: pointer;
@@ -515,12 +519,12 @@
           background 0.15s;
       }
       .btn-primary {
-        background: var(--red-600);
+        background: var(--blue-600);
         color: #fff;
         box-shadow: 0 6px 16px -6px rgba(149, 29, 29, 0.55);
       }
       .btn-primary:hover {
-        background: var(--red-700);
+        background: var(--blue-700);
       }
       .btn-primary:disabled {
         background: #d6c9c9;
@@ -530,15 +534,15 @@
       }
       .btn-ghost {
         background: #fff;
-        color: var(--red-700);
+        color: var(--blue-700);
         border: 1.5px solid var(--line);
       }
       .btn-ghost:hover {
-        border-color: var(--red-500);
+        border-color: var(--blue-500);
       }
       .btn-text {
         background: none;
-        color: var(--red-600);
+        color: var(--blue-600);
         padding: 8px 4px;
         font-weight: 600;
       }
@@ -568,9 +572,9 @@
         justify-content: space-between;
       }
       .flip-btn {
-        background: var(--red-50);
-        color: var(--red-700);
-        border: 1px solid var(--red-100);
+        background: var(--blue-50);
+        color: var(--blue-700);
+        border: 1px solid var(--blue-100);
         border-radius: 7px;
         padding: 5px 10px;
         font-size: 11px;
@@ -601,7 +605,7 @@
         height: 8cm;
         background: #fff;
         border-radius: 0.14cm;
-        border: 1px solid var(--red-600);
+        border: 1px solid var(--blue-600);
         position: relative;
         overflow: hidden;
         font-family: var(--font-body);
@@ -614,9 +618,9 @@
         height: 0.11cm;
         background: linear-gradient(
           90deg,
-          var(--red-800),
-          var(--red-500) 60%,
-          var(--red-800)
+          var(--blue-800),
+          var(--blue-500) 60%,
+          var(--blue-800)
         );
       }
       .id-card .card-pad {
@@ -662,8 +666,8 @@
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        background: var(--red-50);
-        border: 1px solid var(--red-100);
+        background: var(--blue-50);
+        border: 1px solid var(--blue-100);
       }
       .card-logo img {
         width: 100%;
@@ -673,7 +677,7 @@
       .card-logo svg {
         width: 60%;
         height: 60%;
-        color: var(--red-500);
+        color: var(--blue-500);
       }
       .card-titles {
         flex: 1;
@@ -694,7 +698,7 @@
         font-weight: 800;
         font-size: 12.5px;
         line-height: 1.2;
-        color: var(--red-800);
+        color: var(--blue-800);
         text-transform: uppercase;
         letter-spacing: 0.005em;
         margin-top: 1px;
@@ -762,7 +766,7 @@
       .card-body .val.name {
         font-size: 12.5px;
         font-weight: 800;
-        color: var(--red-800);
+        color: var(--blue-800);
       }
       .card-body .pair-row {
         grid-column: 1 / -1;
@@ -834,7 +838,7 @@
         font-family: var(--font-head);
         font-weight: 800;
         font-size: 12px;
-        color: var(--red-800);
+        color: var(--blue-800);
         text-transform: uppercase;
         letter-spacing: 0.02em;
       }
@@ -857,8 +861,8 @@
         padding: 0;
       }
       .paraf-table th {
-        background: var(--red-100);
-        color: var(--red-800);
+        background: var(--blue-100);
+        color: var(--blue-800);
         font-size: 8.4px;
         font-weight: 700;
         padding: 0.08cm 0.02cm;
@@ -886,8 +890,8 @@
         display: flex;
         align-items: center;
         gap: 14px;
-        background: var(--red-50);
-        border: 1px solid var(--red-100);
+        background: var(--blue-50);
+        border: 1px solid var(--blue-100);
         border-radius: 12px;
         padding: 16px 18px;
       }
@@ -896,7 +900,7 @@
         height: 38px;
         border-radius: 9px;
         background: #fff;
-        border: 1px solid var(--red-100);
+        border: 1px solid var(--blue-100);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -924,8 +928,8 @@
       }
       .dropzone:hover,
       .dropzone.drag {
-        border-color: var(--red-500);
-        background: var(--red-50);
+        border-color: var(--blue-500);
+        background: var(--blue-50);
       }
       .dropzone input {
         display: none;
@@ -934,8 +938,8 @@
         width: 44px;
         height: 44px;
         border-radius: 12px;
-        background: var(--red-50);
-        border: 1px solid var(--red-100);
+        background: var(--blue-50);
+        border: 1px solid var(--blue-100);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1022,7 +1026,7 @@
         color: var(--ink-soft);
       }
       .pill b {
-        color: var(--red-700);
+        color: var(--blue-700);
       }
 
       /* ---------- Step 3: print setup ---------- */
@@ -1084,7 +1088,7 @@
         transition: background 0.15s;
       }
       .switch.on {
-        background: var(--red-600);
+        background: var(--blue-600);
       }
       .switch::after {
         content: "";
@@ -1138,9 +1142,9 @@
         color: var(--ink-soft);
       }
       .sheet-tab.active {
-        border-color: var(--red-600);
-        color: var(--red-700);
-        background: var(--red-50);
+        border-color: var(--blue-600);
+        color: var(--blue-700);
+        background: var(--blue-50);
       }
 
       .scale-wrap {
@@ -1191,15 +1195,15 @@
         gap: 10px;
         margin-top: 10px;
         font-size: 12.5px;
-        color: var(--red-700);
+        color: var(--blue-700);
         font-weight: 600;
       }
       .pdf-progress .spin {
         width: 15px;
         height: 15px;
         border-radius: 50%;
-        border: 2px solid var(--red-100);
-        border-top-color: var(--red-600);
+        border: 2px solid var(--blue-100);
+        border-top-color: var(--blue-600);
         animation: pdfspin 0.7s linear infinite;
         flex: 0 0 15px;
       }
