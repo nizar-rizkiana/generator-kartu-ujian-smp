@@ -1,0 +1,2859 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Generator Kartu Peserta Ujian</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+      :root {
+        --red-900: #5c1414;
+        --red-800: #7a1a1a;
+        --red-700: #951d1d;
+        --red-600: #b52222;
+        --red-500: #d92b2b;
+        --red-100: #fbe4e4;
+        --red-50: #fdf3f3;
+        --ink: #221a1a;
+        --ink-soft: #413737;
+        --paper: #ffffff;
+        --line: #e8dede;
+        --line-soft: #f1e9e9;
+        --sand: #faf7f5;
+        --ok: #1f7a4d;
+        --warn: #a15c00;
+        --font-head: "Plus Jakarta Sans", system-ui, sans-serif;
+        --font-body: "Inter", system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--sand);
+        color: var(--ink);
+        font-family: var(--font-body);
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        min-height: 100%;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: var(--font-head);
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      button {
+        font-family: var(--font-body);
+      }
+      ::selection {
+        background: var(--red-100);
+      }
+
+      /* ---------- App shell ---------- */
+      .app {
+        display: flex;
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+      .rail {
+        width: 248px;
+        flex: 0 0 248px;
+        background: linear-gradient(175deg, var(--red-900), var(--red-700) 78%);
+        color: #fff;
+        padding: 28px 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        height: 100dvh;
+        transition:
+          width 0.2s ease,
+          flex-basis 0.2s ease,
+          padding 0.2s ease,
+          transform 0.2s ease;
+        overflow-x: hidden;
+        overflow-y: auto;
+        z-index: 50;
+      }
+      .rail-toggle {
+        appearance: none;
+        border: none;
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex: 0 0 30px;
+        transition: background 0.15s;
+      }
+      .rail-toggle:hover {
+        background: rgba(255, 255, 255, 0.24);
+      }
+      .rail-toggle svg {
+        width: 16px;
+        height: 16px;
+        transition: transform 0.2s ease;
+      }
+      .rail.collapsed .rail-toggle svg {
+        transform: rotate(180deg);
+      }
+      .rail.collapsed {
+        width: 76px;
+        flex-basis: 76px;
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+      .rail.collapsed .brand {
+        justify-content: center;
+      }
+      .rail.collapsed .brand-text,
+      .rail.collapsed .step-label,
+      .rail.collapsed .step-desc,
+      .rail.collapsed .rail-foot,
+      .rail.collapsed .rail-line,
+      .rail.collapsed .step-desc {
+        display: none;
+      }
+      .rail.collapsed .step-btn {
+        justify-content: center;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .rail.collapsed .steps {
+        align-items: center;
+      }
+      .mobile-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(20, 10, 10, 0.45);
+        z-index: 45;
+      }
+      .mobile-toggle {
+        display: none;
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        z-index: 60;
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+        background: var(--red-700);
+        color: #fff;
+        border: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.45);
+      }
+      @media (max-width: 900px) {
+        .rail {
+          position: fixed;
+          left: 0;
+          top: 0;
+          height: 100vh;
+          height: 100dvh;
+          transform: translateX(-100%);
+          width: 250px !important;
+          flex-basis: 250px !important;
+          padding-left: 20px !important;
+          padding-right: 20px !important;
+        }
+        .rail.mobile-open {
+          transform: translateX(0);
+          box-shadow: 0 0 44px rgba(0, 0, 0, 0.4);
+        }
+        .rail.mobile-open.collapsed .brand-text,
+        .rail.mobile-open.collapsed .step-label,
+        .rail.mobile-open.collapsed .step-desc,
+        .rail.mobile-open.collapsed .rail-foot,
+        .rail.mobile-open.collapsed .rail-line {
+          display: block;
+        }
+        .rail.mobile-open.collapsed .step-btn {
+          justify-content: flex-start;
+          padding-left: 10px;
+          padding-right: 10px;
+        }
+        .rail-toggle {
+          display: none;
+        }
+        .mobile-toggle {
+          display: flex;
+        }
+        .mobile-backdrop.show {
+          display: block;
+        }
+        .content {
+          padding-top: 74px;
+        }
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 34px;
+      }
+      .brand-mark svg {
+        width: 19px;
+        height: 19px;
+      }
+      .brand-text {
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 14.5px;
+        line-height: 1.25;
+      }
+      .brand-text span {
+        display: block;
+        font-weight: 500;
+        font-size: 11px;
+        opacity: 0.72;
+        letter-spacing: 0.01em;
+      }
+
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 4px;
+      }
+      .step-btn {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 10px;
+        border-radius: 12px;
+        background: transparent;
+        border: none;
+        color: #fff;
+        text-align: left;
+        cursor: pointer;
+        position: relative;
+        transition: background 0.15s ease;
+      }
+      .step-btn:not(.locked):hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .step-btn.active {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      .step-num {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255, 255, 255, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        flex: 0 0 26px;
+        font-family: var(--font-head);
+      }
+      .step-btn.active .step-num {
+        background: #fff;
+        color: var(--red-700);
+        border-color: #fff;
+      }
+      .step-btn.done .step-num {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .step-btn.done .step-num::after {
+        content: "✓";
+      }
+      .step-btn.done .step-num {
+        font-size: 0;
+      }
+      .step-btn.done .step-num::after {
+        font-size: 12px;
+      }
+      .step-label {
+        font-size: 13.5px;
+        font-weight: 600;
+        line-height: 1.3;
+      }
+      .step-desc {
+        font-size: 11.5px;
+        opacity: 0.68;
+        margin-top: 2px;
+        line-height: 1.3;
+      }
+      .step-btn.locked {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+      .rail-line {
+        position: absolute;
+        left: 23px;
+        top: 38px;
+        width: 1.5px;
+        height: calc(100% - 6px);
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      .rail-foot {
+        margin-top: auto;
+        font-size: 11px;
+        opacity: 0.6;
+        line-height: 1.5;
+      }
+
+      .content {
+        flex: 1;
+        min-width: 0;
+        padding: 34px 40px 80px;
+      }
+      .content-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+      .page-head {
+        margin-bottom: 26px;
+      }
+      .page-head h1 {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .page-head p {
+        margin: 6px 0 0;
+        color: var(--ink-soft);
+        font-size: 14px;
+        max-width: 640px;
+        line-height: 1.5;
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--red-600);
+        margin-bottom: 6px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 28px;
+        align-items: start;
+      }
+      @media (max-width: 980px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .panel {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 24px 26px;
+      }
+      .panel + .panel {
+        margin-top: 18px;
+      }
+      .panel h3 {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .panel .sub {
+        font-size: 12.5px;
+        color: var(--ink-soft);
+        margin-bottom: 16px;
+        line-height: 1.5;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 14px;
+      }
+      .field label {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--ink);
+      }
+      .field .hint {
+        font-size: 11px;
+        color: var(--ink-soft);
+        font-weight: 400;
+      }
+      .field input[type="text"],
+      .field input[type="date"],
+      .field textarea {
+        border: 1.5px solid var(--line);
+        border-radius: 9px;
+        padding: 9px 11px;
+        font-size: 13.5px;
+        font-family: var(--font-body);
+        color: var(--ink);
+        background: #fff;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .field input:focus,
+      .field textarea:focus {
+        border-color: var(--red-500);
+      }
+      .field textarea {
+        resize: vertical;
+        min-height: 56px;
+      }
+
+      .upload-box {
+        border: 1.5px dashed var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        background: var(--sand);
+      }
+      .upload-box:hover {
+        border-color: var(--red-500);
+        background: var(--red-50);
+      }
+      .upload-thumb {
+        width: 46px;
+        height: 46px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        flex: 0 0 46px;
+      }
+      .upload-thumb img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+      .upload-text strong {
+        display: block;
+        font-size: 12.5px;
+        font-weight: 600;
+      }
+      .upload-text span {
+        font-size: 11px;
+        color: var(--ink-soft);
+      }
+      .upload-box input {
+        display: none;
+      }
+      .clear-link {
+        background: none;
+        border: none;
+        color: var(--red-600);
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+        margin-left: auto;
+      }
+
+      .btn {
+        appearance: none;
+        border: none;
+        border-radius: 10px;
+        padding: 11px 20px;
+        font-size: 13.5px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-head);
+        transition:
+          transform 0.1s,
+          box-shadow 0.15s,
+          background 0.15s;
+      }
+      .btn-primary {
+        background: var(--red-600);
+        color: #fff;
+        box-shadow: 0 6px 16px -6px rgba(149, 29, 29, 0.55);
+      }
+      .btn-primary:hover {
+        background: var(--red-700);
+      }
+      .btn-primary:disabled {
+        background: #d6c9c9;
+        box-shadow: none;
+        cursor: not-allowed;
+        color: #fff;
+      }
+      .btn-ghost {
+        background: #fff;
+        color: var(--red-700);
+        border: 1.5px solid var(--line);
+      }
+      .btn-ghost:hover {
+        border-color: var(--red-500);
+      }
+      .btn-text {
+        background: none;
+        color: var(--red-600);
+        padding: 8px 4px;
+        font-weight: 600;
+      }
+      .btn-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 22px;
+        justify-content: space-between;
+      }
+
+      /* ---------- Live card preview ---------- */
+      .preview-stack {
+        position: sticky;
+        top: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .preview-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .flip-btn {
+        background: var(--red-50);
+        color: var(--red-700);
+        border: 1px solid var(--red-100);
+        border-radius: 7px;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .card-frame {
+        background: repeating-linear-gradient(
+          45deg,
+          #f3ecec,
+          #f3ecec 8px,
+          #efe7e7 8px,
+          #efe7e7 16px
+        );
+        border-radius: 16px;
+        padding: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* ===== The exam card itself (also used in print) ===== */
+      .id-card {
+        width: 9.7cm;
+        height: 8cm;
+        background: #fff;
+        border-radius: 0.14cm;
+        border: 1px solid var(--red-600);
+        position: relative;
+        overflow: hidden;
+        font-family: var(--font-body);
+        color: var(--ink);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        display: flex;
+        flex-direction: column;
+      }
+      .id-card .band {
+        height: 0.11cm;
+        background: linear-gradient(
+          90deg,
+          var(--red-800),
+          var(--red-500) 60%,
+          var(--red-800)
+        );
+      }
+      .id-card .card-pad {
+        padding: 0.22cm 0.28cm 0.2cm;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        position: relative;
+        z-index: 1;
+      }
+      .card-watermark {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0.11cm;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .card-watermark img {
+        width: 5.4cm;
+        height: 5.4cm;
+        object-fit: contain;
+        opacity: 0.1;
+        filter: grayscale(1);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.2cm;
+      }
+      .card-logo {
+        width: 1.35cm;
+        height: 1.35cm;
+        border-radius: 0.12cm;
+        flex: 0 0 1.35cm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: var(--red-50);
+        border: 1px solid var(--red-100);
+      }
+      .card-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .card-logo svg {
+        width: 60%;
+        height: 60%;
+        color: var(--red-500);
+      }
+      .card-titles {
+        flex: 1;
+        min-width: 0;
+        text-align: center;
+      }
+      .card-titles .title-fixed {
+        font-family: var(--font-head);
+        font-weight: 700;
+        font-size: 8.4px;
+        line-height: 1.2;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .card-titles .title-main {
+        font-family: var(--font-head);
+        font-weight: 800;
+        font-size: 12.5px;
+        line-height: 1.2;
+        color: var(--red-800);
+        text-transform: uppercase;
+        letter-spacing: 0.005em;
+        margin-top: 1px;
+      }
+      .card-titles .title-school {
+        font-size: 9.6px;
+        font-weight: 700;
+        margin-top: 2.5px;
+        color: var(--ink);
+      }
+      .card-titles .title-year {
+        font-size: 8.4px;
+        color: var(--ink-soft);
+        margin-top: 1.5px;
+      }
+      .card-qr {
+        width: 1.35cm;
+        height: 1.35cm;
+        flex: 0 0 1.35cm;
+        border: 1px solid var(--line);
+        border-radius: 0.07cm;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .card-qr img,
+      .card-qr canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .card-divider {
+        height: 0;
+        border-top: 2px solid #6f0101;
+        margin: 0.16cm 0 0.16cm;
+      }
+
+      .card-body {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 2.75cm 1fr;
+        row-gap: 0.1cm;
+        column-gap: 0.08cm;
+        align-content: start;
+        position: relative;
+        z-index: 1;
+      }
+      .card-body .lbl {
+        font-size: 9.4px;
+        color: var(--ink-soft);
+        font-weight: 600;
+      }
+      .card-body .col {
+        font-size: 9.4px;
+        color: var(--ink-soft);
+      }
+      .card-body .val {
+        font-size: 10.2px;
+        font-weight: 700;
+        color: var(--ink);
+        word-break: break-word;
+      }
+      .card-body .val.name {
+        font-size: 12.5px;
+        font-weight: 800;
+        color: var(--red-800);
+      }
+      .card-body .pair-row {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 0.4cm;
+        margin-top: 0.08cm;
+        padding-top: 0.08cm;
+        border-top: 1px dashed var(--line-soft);
+      }
+      .card-body .pair-row .pair {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.045cm;
+        min-width: 0;
+      }
+
+      .card-foot {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: auto;
+        padding-top: 0.1cm;
+      }
+      .sign-block {
+        text-align: center;
+        /*width: 3.2cm;*/
+      }
+      .sign-block .place-date {
+        font-size: 8.4px;
+        color: var(--ink-soft);
+      }
+      .sign-block .role {
+        font-size: 8.4px;
+        color: var(--ink-soft);
+        margin-top: 0.03cm;
+      }
+      .sign-img {
+        height: 0.85cm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0.02cm 0;
+        position: relative;
+      }
+      .sign-img img {
+        max-height: 170%;
+        max-width: 170%;
+        object-fit: contain;
+        position: absolute;
+      }
+      .sign-block .name {
+        font-size: 9.2px;
+        font-weight: 800;
+        text-decoration: underline;
+        color: var(--ink);
+        margin-top: 0.04cm;
+      }
+      .sign-block .nip {
+        font-size: 8px;
+        color: var(--ink-soft);
+      }
+
+      /* Back side */
+      .id-card.back .card-pad {
+        align-items: stretch;
+      }
+      .back-title {
+        text-align: center;
+        font-family: var(--font-head);
+        font-weight: 800;
+        font-size: 12px;
+        color: var(--red-800);
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+      .back-sub {
+        text-align: center;
+        font-size: 8.6px;
+        color: var(--ink-soft);
+        margin-top: 0.06cm;
+      }
+      .paraf-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.2cm;
+        table-layout: fixed;
+      }
+      .paraf-table th,
+      .paraf-table td {
+        border: 1.5px solid #5c1414;
+        text-align: center;
+        padding: 0;
+      }
+      .paraf-table th {
+        background: var(--red-100);
+        color: var(--red-800);
+        font-size: 8.4px;
+        font-weight: 700;
+        padding: 0.08cm 0.02cm;
+      }
+      .paraf-table td {
+        height: 0.72cm;
+      }
+      .paraf-table .sesi-col {
+        background: var(--sand);
+        font-size: 7.8px;
+        font-weight: 700;
+        color: var(--ink-soft);
+        width: 1.05cm;
+      }
+      .back-note {
+        margin-top: 0.16cm;
+        font-size: 7.4px;
+        color: var(--ink-soft);
+        text-align: center;
+        line-height: 1.45;
+      }
+
+      /* ---------- Excel template + data table ---------- */
+      .template-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--red-50);
+        border: 1px solid var(--red-100);
+        border-radius: 12px;
+        padding: 16px 18px;
+      }
+      .template-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 9px;
+        background: #fff;
+        border: 1px solid var(--red-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 38px;
+      }
+      .template-card strong {
+        font-size: 13px;
+      }
+      .template-card p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: var(--ink-soft);
+      }
+
+      .dropzone {
+        border: 1.5px dashed var(--line);
+        border-radius: 14px;
+        padding: 30px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          background 0.15s;
+        margin-top: 16px;
+      }
+      .dropzone:hover,
+      .dropzone.drag {
+        border-color: var(--red-500);
+        background: var(--red-50);
+      }
+      .dropzone input {
+        display: none;
+      }
+      .dropzone .dz-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--red-50);
+        border: 1px solid var(--red-100);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+      }
+      .dropzone strong {
+        font-size: 13.5px;
+        display: block;
+      }
+      .dropzone span {
+        font-size: 12px;
+        color: var(--ink-soft);
+        display: block;
+        margin-top: 3px;
+      }
+
+      .status-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 12.5px;
+        margin-top: 14px;
+      }
+      .status-banner.ok {
+        background: #eefaf3;
+        color: var(--ok);
+        border: 1px solid #cdeedd;
+      }
+      .status-banner.err {
+        background: #fdeeee;
+        color: #b3261e;
+        border: 1px solid #f6cdcd;
+      }
+
+      .data-table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin-top: 16px;
+      }
+      table.data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+        min-width: 760px;
+      }
+      table.data-table th {
+        background: var(--sand);
+        text-align: left;
+        padding: 9px 12px;
+        font-weight: 700;
+        font-size: 11px;
+        color: var(--ink-soft);
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      table.data-table td {
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--line-soft);
+        white-space: nowrap;
+      }
+      table.data-table tr:last-child td {
+        border-bottom: none;
+      }
+      table.data-table td.name-cell {
+        font-weight: 600;
+      }
+
+      .summary-pills {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+      .pill {
+        background: var(--sand);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 6px 13px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink-soft);
+      }
+      .pill b {
+        color: var(--red-700);
+      }
+
+      /* ---------- Step 3: print setup ---------- */
+      .setup-grid {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      @media (max-width: 1080px) {
+        .setup-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .num-field {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .num-field input {
+        width: 80px;
+        border: 1.5px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 13px;
+        text-align: center;
+      }
+      .num-field span {
+        font-size: 12px;
+        color: var(--ink-soft);
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 11px 0;
+        border-top: 1px solid var(--line-soft);
+      }
+      .toggle-row:first-of-type {
+        border-top: none;
+      }
+      .toggle-row .t-label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle-row .t-desc {
+        font-size: 11.5px;
+        color: var(--ink-soft);
+        margin-top: 2px;
+      }
+      .switch {
+        width: 40px;
+        height: 23px;
+        border-radius: 999px;
+        background: var(--line);
+        position: relative;
+        cursor: pointer;
+        flex: 0 0 40px;
+        transition: background 0.15s;
+      }
+      .switch.on {
+        background: var(--red-600);
+      }
+      .switch::after {
+        content: "";
+        position: absolute;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        background: #fff;
+        top: 3px;
+        left: 3px;
+        transition: left 0.15s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+      }
+      .switch.on::after {
+        left: 20px;
+      }
+
+      .sheet-info {
+        background: var(--sand);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 12px;
+        color: var(--ink-soft);
+        line-height: 1.6;
+        margin-top: 16px;
+      }
+      .sheet-info b {
+        color: var(--ink);
+      }
+
+      .print-preview-outer {
+        background: #e9e2e2;
+        border-radius: 16px;
+        padding: 24px;
+        overflow: auto;
+      }
+      .sheet-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .sheet-tab {
+        background: #fff;
+        border: 1.5px solid var(--line);
+        border-radius: 9px;
+        padding: 7px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        color: var(--ink-soft);
+      }
+      .sheet-tab.active {
+        border-color: var(--red-600);
+        color: var(--red-700);
+        background: var(--red-50);
+      }
+
+      .scale-wrap {
+        overflow: visible;
+      }
+      .a4-sheet {
+        width: 21cm;
+        height: 29.7cm;
+        background: #fff;
+        position: relative;
+        margin: 0 auto;
+        box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.35);
+        transform-origin: top left;
+      }
+      .a4-sheet .cards-grid {
+        position: absolute;
+        display: grid;
+        grid-template-columns: repeat(2, 9.7cm);
+        grid-auto-rows: 8cm;
+      }
+      .a4-sheet .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .a4-sheet .cell.empty .id-card {
+        visibility: hidden;
+      }
+
+      .print-final-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-top: 18px;
+        flex-wrap: wrap;
+      }
+      .print-final-actions .note {
+        font-size: 12px;
+        color: var(--ink-soft);
+      }
+      .btn[disabled] {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+      .pdf-progress {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        font-size: 12.5px;
+        color: var(--red-700);
+        font-weight: 600;
+      }
+      .pdf-progress .spin {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 2px solid var(--red-100);
+        border-top-color: var(--red-600);
+        animation: pdfspin 0.7s linear infinite;
+        flex: 0 0 15px;
+      }
+      @keyframes pdfspin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .pdf-capture-zone {
+        position: fixed;
+        left: -99999px;
+        top: 0;
+        background: #fff;
+      }
+
+      /* Hidden helper for QR generation buffer */
+      .qr-scratch {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+      }
+
+      /* ---------- Print ---------- */
+      #printRoot {
+        display: none;
+      }
+      @media print {
+        @page {
+          size: A4;
+          margin: 0;
+        }
+        html,
+        body {
+          background: #fff !important;
+        }
+        * {
+          -webkit-print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        body * {
+          visibility: hidden;
+        }
+        #printRoot,
+        #printRoot * {
+          visibility: visible;
+        }
+        #printRoot {
+          display: block !important;
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
+        .a4-sheet {
+          box-shadow: none;
+          margin: 0;
+        }
+        .a4-sheet:not(:last-child) {
+          page-break-after: always;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <!-- ============ SIDEBAR ============ -->
+      <button class="mobile-toggle" id="mobileToggle" aria-label="Buka menu">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none">
+          <path
+            d="M4 6h16M4 12h16M4 18h16"
+            stroke="#fff"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+      <div class="mobile-backdrop" id="mobileBackdrop"></div>
+      <aside class="rail" id="rail">
+        <div class="brand">
+          <div class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none">
+              <rect
+                x="2"
+                y="4"
+                width="20"
+                height="16"
+                rx="2.4"
+                stroke="#951d1d"
+                stroke-width="1.8"
+              />
+              <circle cx="8" cy="10.3" r="1.9" fill="#951d1d" />
+              <path
+                d="M4.8 16.3c0-1.9 1.6-3 3.2-3s3.2 1.1 3.2 3"
+                stroke="#951d1d"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+              <path
+                d="M14.2 9h5.4M14.2 12h5.4M14.2 15h3.4"
+                stroke="#951d1d"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+          </div>
+          <div class="brand-text">
+            Kartu Ujian<span>Generator kartu peserta</span>
+          </div>
+          <button
+            class="rail-toggle"
+            id="railToggle"
+            aria-label="Ciutkan sidebar"
+            style="margin-left: auto"
+          >
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 5l-7 7 7 7"
+                stroke="#fff"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div class="steps" style="position: relative">
+          <div class="rail-line"></div>
+          <button class="step-btn active" data-step="1">
+            <div class="step-num">1</div>
+            <div>
+              <div class="step-label">Pengaturan Kartu</div>
+              <div class="step-desc">Logo, judul, sekolah, tanda tangan</div>
+            </div>
+          </button>
+          <button class="step-btn locked" data-step="2">
+            <div class="step-num">2</div>
+            <div>
+              <div class="step-label">Data Peserta</div>
+              <div class="step-desc">Unggah file Excel</div>
+            </div>
+          </button>
+          <button class="step-btn locked" data-step="3">
+            <div class="step-num">3</div>
+            <div>
+              <div class="step-label">Atur & Cetak</div>
+              <div class="step-desc">Tata letak kertas A4</div>
+            </div>
+          </button>
+        </div>
+
+        <div class="rail-foot">
+          Kartu 9.7 × 8 cm · 6 kartu / lembar A4 · cetak bolak-balik
+        </div>
+      </aside>
+
+      <!-- ============ CONTENT ============ -->
+      <main class="content">
+        <div class="content-inner">
+          <!-- ================= STEP 1 ================= -->
+          <section class="step-panel" id="panel-1">
+            <div class="page-head">
+              <div class="eyebrow">LANGKAH 1 DARI 3</div>
+              <h1>Pengaturan identitas kartu</h1>
+              <p>
+                Isi sekali di sini — berlaku untuk seluruh kartu peserta. Data
+                ini muncul di bagian header dan tanda tangan setiap kartu.
+              </p>
+            </div>
+
+            <div class="grid-2">
+              <div>
+                <div class="panel">
+                  <h3>Kop kartu</h3>
+                  <div class="sub">
+                    Logo, nama ujian, dan periode ajaran yang tampil di bagian
+                    atas kartu.
+                  </div>
+
+                  <div class="field">
+                    <label>Logo sekolah / instansi</label>
+                    <label class="upload-box" id="logoUploadBox">
+                      <input type="file" id="logoInput" accept="image/*" />
+                      <div class="upload-thumb" id="logoThumb">
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="20"
+                          height="20"
+                          fill="none"
+                        >
+                          <path
+                            d="M4 16.5V6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v10.5M4 16.5l4.5-5 3.5 3.5 3-3L20 16.5M4 16.5V18a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5"
+                            stroke="#95807f"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      </div>
+                      <div class="upload-text">
+                        <strong>Unggah logo</strong
+                        ><span>PNG/JPG, disarankan persegi</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="clear-link"
+                        id="logoClear"
+                        style="display: none"
+                      >
+                        Hapus
+                      </button>
+                    </label>
+                  </div>
+
+                  <div class="field">
+                    <label>Nama ujian</label>
+                    <input
+                      type="text"
+                      id="examTitle"
+                      placeholder="Contoh: Ujian Sekolah, Asesmen Sumatif Akhir Semester"
+                    />
+                    <span class="hint"
+                      >Baris "Kartu Peserta" sudah tetap tercetak di baris
+                      pertama kop kartu — isian ini muncul sebagai baris kedua
+                      di bawahnya.</span
+                    >
+                  </div>
+
+                  <div class="field-row">
+                    <div class="field">
+                      <label>Nama sekolah</label>
+                      <input
+                        type="text"
+                        id="schoolName"
+                        placeholder="Contoh: SMA Negeri 1 Contoh"
+                      />
+                    </div>
+                    <div class="field">
+                      <label>Tahun pelajaran</label>
+                      <input
+                        type="text"
+                        id="schoolYear"
+                        placeholder="Contoh: 2025/2026"
+                      />
+                    </div>
+                  </div>
+                  <div
+                    class="hint"
+                    style="margin-top: -8px; margin-bottom: 6px"
+                  >
+                    Nama sekolah di sini dipakai sebagai bawaan. Jika file Excel
+                    memiliki kolom "Sekolah" terisi, nilainya akan menggantikan
+                    bawaan ini per-siswa.
+                  </div>
+                </div>
+
+                <div class="panel">
+                  <h3>Tanda tangan pengesahan</h3>
+                  <div class="sub">
+                    Tampil di pojok kanan bawah setiap kartu, bagian depan.
+                  </div>
+
+                  <div class="field-row">
+                    <div class="field">
+                      <label>Kota</label>
+                      <input
+                        type="text"
+                        id="cardCity"
+                        placeholder="Contoh: Jakarta"
+                      />
+                    </div>
+                    <div class="field">
+                      <label>Tanggal kartu</label>
+                      <input type="date" id="cardDate" />
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label>Tanda tangan (gambar), opsional</label>
+                    <label class="upload-box" id="signUploadBox">
+                      <input type="file" id="signInput" accept="image/*" />
+                      <div class="upload-thumb" id="signThumb">
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="18"
+                          height="18"
+                          fill="none"
+                        >
+                          <path
+                            d="M4 18c3-1 4-6 6.5-8.5S15 6 17 8s.5 5-2 6.5S8 16 4 18Z"
+                            stroke="#95807f"
+                            stroke-width="1.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          />
+                        </svg>
+                      </div>
+                      <div class="upload-text">
+                        <strong>Unggah tanda tangan</strong
+                        ><span>Latar transparan lebih rapi</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="clear-link"
+                        id="signClear"
+                        style="display: none"
+                      >
+                        Hapus
+                      </button>
+                    </label>
+                  </div>
+
+                  <div class="field-row">
+                    <div class="field">
+                      <label>Nama kepala sekolah</label>
+                      <input
+                        type="text"
+                        id="principalName"
+                        placeholder="Contoh: Drs. Ahmad Sujarwo, M.Pd."
+                      />
+                    </div>
+                    <div class="field">
+                      <label>NIY <span class="hint">(opsional)</span></label>
+                      <input
+                        type="text"
+                        id="principalNip"
+                        placeholder="Contoh: 196501011990031001"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="btn-row">
+                  <div></div>
+                  <button class="btn btn-primary" id="toStep2">
+                    Lanjut ke data peserta →
+                  </button>
+                </div>
+              </div>
+
+              <div class="preview-stack">
+                <div class="preview-label">
+                  Pratinjau kartu
+                  <button class="flip-btn" id="flip1">
+                    Lihat bagian belakang
+                  </button>
+                </div>
+                <div class="card-frame"><div id="previewCard1"></div></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================= STEP 2 ================= -->
+          <section class="step-panel" id="panel-2" style="display: none">
+            <div class="page-head">
+              <div class="eyebrow">LANGKAH 2 DARI 3</div>
+              <h1>Unggah data peserta</h1>
+              <p>
+                Gunakan format Excel yang disediakan agar data terbaca sistem
+                dengan benar. Setiap baris menjadi satu kartu.
+              </p>
+            </div>
+
+            <div class="panel">
+              <h3>1. Unduh format Excel</h3>
+              <div class="sub">
+                Berisi contoh 3 data peserta (data dummy) sebagai panduan
+                pengisian kolom.
+              </div>
+              <div class="template-card">
+                <div class="template-icon">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+                    <path
+                      d="M6 3.5h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1Z"
+                      stroke="#951d1d"
+                      stroke-width="1.5"
+                    />
+                    <path d="M14 3.5v4h4" stroke="#951d1d" stroke-width="1.5" />
+                    <path
+                      d="M8.5 13.5l2 3 2-4.5 2 4.5"
+                      stroke="#951d1d"
+                      stroke-width="1.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <div style="flex: 1">
+                  <strong>template-data-peserta.xlsx</strong>
+                  <p>
+                    Kolom: No Peserta, Nama Lengkap, NISN, Tempat Tanggal Lahir,
+                    Jenis Kelamin, Kelas, Sekolah
+                  </p>
+                </div>
+                <button class="btn btn-ghost" id="downloadTemplate">
+                  Unduh template
+                </button>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>2. Unggah file Excel</h3>
+              <div class="sub">
+                Format .xlsx, .xls, atau .csv — sesuai susunan kolom pada
+                template.
+              </div>
+
+              <label class="dropzone" id="dropzone">
+                <input type="file" id="excelInput" accept=".xlsx,.xls,.csv" />
+                <div class="dz-icon">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+                    <path
+                      d="M12 15V4m0 0-4 4m4-4 4 4"
+                      stroke="#951d1d"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"
+                      stroke="#951d1d"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </div>
+                <strong>Klik untuk pilih file, atau seret ke sini</strong>
+                <span id="dzFileName">Belum ada file dipilih</span>
+              </label>
+
+              <div id="uploadStatus"></div>
+
+              <div id="dataSummary" style="display: none">
+                <div class="summary-pills">
+                  <div class="pill">
+                    <b id="pillCount">0</b> peserta terbaca
+                  </div>
+                  <div class="pill">
+                    <b id="pillSheets">0</b> lembar A4 dibutuhkan
+                  </div>
+                </div>
+                <div class="data-table-wrap">
+                  <table class="data-table" id="dataTable">
+                    <thead>
+                      <tr>
+                        <th>No</th>
+                        <th>No Peserta</th>
+                        <th>Nama</th>
+                        <th>NISN</th>
+                        <th>TTL</th>
+                        <th>JK</th>
+                        <th>Kelas</th>
+                        <th>Sekolah</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dataTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button class="btn btn-ghost" data-goto="1">← Kembali</button>
+              <button class="btn btn-primary" id="toStep3" disabled>
+                Lanjut ke pengaturan cetak →
+              </button>
+            </div>
+          </section>
+
+          <!-- ================= STEP 3 ================= -->
+          <section class="step-panel" id="panel-3" style="display: none">
+            <div class="page-head">
+              <div class="eyebrow">LANGKAH 3 DARI 3</div>
+              <h1>Atur tata letak & cetak</h1>
+              <p>
+                Sesuaikan margin dan jarak antar kartu agar presisi saat dicetak
+                di kertas A4, lalu cetak bagian depan dan belakang secara
+                bergantian.
+              </p>
+            </div>
+
+            <div class="setup-grid">
+              <div>
+                <div class="panel">
+                  <h3>Margin & jarak kartu</h3>
+                  <div class="sub">
+                    Diukur dari tepi kertas A4 (21 × 29.7 cm). Ukuran kartu
+                    tetap 9.7 × 8 cm.
+                  </div>
+
+                  <div class="field">
+                    <label>Margin atas</label>
+                    <div class="num-field">
+                      <input type="number" id="marginTop" step="0.05" min="0" />
+                      <span>cm</span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label>Margin kiri</label>
+                    <div class="num-field">
+                      <input
+                        type="number"
+                        id="marginLeft"
+                        step="0.05"
+                        min="0"
+                      />
+                      <span>cm</span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label>Jarak antar kolom</label>
+                    <div class="num-field">
+                      <input type="number" id="gapX" step="0.05" min="0" />
+                      <span>cm</span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label>Jarak antar baris</label>
+                    <div class="num-field">
+                      <input type="number" id="gapY" step="0.05" min="0" />
+                      <span>cm</span>
+                    </div>
+                  </div>
+                  <button class="btn-text" id="centerLayout">
+                    ↺ Tengahkan otomatis
+                  </button>
+
+                  <div class="sheet-info" id="sheetInfo"></div>
+                </div>
+
+                <div class="panel">
+                  <h3>Cetak bolak-balik</h3>
+                  <div class="toggle-row">
+                    <div>
+                      <div class="t-label">Cerminkan halaman belakang</div>
+                      <div class="t-desc">
+                        Membalik urutan kolom pada lembar belakang agar posisi
+                        kartu tetap sejajar saat kertas dibalik pada sisi
+                        panjang.
+                      </div>
+                    </div>
+                    <div class="switch on" id="mirrorToggle"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="print-preview-outer">
+                  <div class="sheet-tabs" id="sheetTabs"></div>
+                  <div class="scale-wrap" id="scaleWrap">
+                    <div id="sheetPreviewMount"></div>
+                  </div>
+                </div>
+
+                <div class="print-final-actions">
+                  <button class="btn btn-primary" id="printBtn">
+                    🖨️ Cetak lembar ini
+                  </button>
+                  <button class="btn btn-ghost" id="downloadPdfAllBtn">
+                    ⬇️ Unduh PDF (semua lembar)
+                  </button>
+                  <button class="btn btn-text" id="downloadPdfOneBtn">
+                    Unduh PDF lembar ini saja
+                  </button>
+                </div>
+                <div
+                  id="pdfProgress"
+                  class="pdf-progress"
+                  style="display: none"
+                ></div>
+                <div class="print-final-actions" style="margin-top: 6px">
+                  <span class="note"
+                    >Urutan PDF "semua lembar": seluruh lembar
+                    <b>depan</b> lebih dulu, lalu seluruh lembar
+                    <b>belakang</b> — sama seperti urutan mencetak fisik (cetak
+                    depan → balik kertas → cetak belakang).</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="btn-row" style="max-width: 340px">
+              <button class="btn btn-ghost" data-goto="2">← Kembali</button>
+              <div></div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <!-- Print-only root, populated by JS before window.print() -->
+    <div id="printRoot"></div>
+    <div class="qr-scratch" id="qrScratch"></div>
+    <div class="pdf-capture-zone" id="pdfCaptureZone"></div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        /* ---------------- State ---------------- */
+        var state = {
+          step: 1,
+          settings: {
+            logo: null,
+            examTitle: "Ujian Sekolah",
+            schoolName: "SMA Negeri 1 Contoh",
+            schoolYear: "2025/2026",
+            cardCity: "Jakarta",
+            cardDate: new Date().toISOString().slice(0, 10),
+            signature: null,
+            principalName: "Drs. Ahmad Sujarwo, M.Pd.",
+            principalNip: "19650101 199003 1 001",
+          },
+          students: [],
+          print: {
+            marginTop: 2.85,
+            marginLeft: 0.8,
+            gapX: 0.3,
+            gapY: 0.3,
+            mirrorBack: true,
+          },
+        };
+
+        try {
+          var saved = localStorage.getItem("kartu-ujian-state-v1");
+          if (saved) {
+            var parsed = JSON.parse(saved);
+            if (parsed.settings) Object.assign(state.settings, parsed.settings);
+            if (parsed.print) Object.assign(state.print, parsed.print);
+            if (Array.isArray(parsed.students))
+              state.students = parsed.students;
+          }
+        } catch (e) {
+          /* ignore */
+        }
+
+        function persist() {
+          try {
+            localStorage.setItem(
+              "kartu-ujian-state-v1",
+              JSON.stringify({
+                settings: state.settings,
+                print: state.print,
+                students: state.students,
+              }),
+            );
+          } catch (e) {
+            /* storage unavailable, ignore silently */
+          }
+        }
+
+        var DAYS = ["Hari 1", "Hari 2", "Hari 3", "Hari 4", "Hari 5"];
+        var SESSIONS = ["Sesi 1", "Sesi 2", "Sesi 3"];
+        var qrSeq = 0;
+
+        /* ---------------- Helpers ---------------- */
+        function esc(s) {
+          return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+            return {
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            }[c];
+          });
+        }
+        function fmtDate(iso) {
+          if (!iso) return "";
+          var d = new Date(iso + "T00:00:00");
+          if (isNaN(d.getTime())) return iso;
+          var bulan = [
+            "Januari",
+            "Februari",
+            "Maret",
+            "April",
+            "Mei",
+            "Juni",
+            "Juli",
+            "Agustus",
+            "September",
+            "Oktober",
+            "November",
+            "Desember",
+          ];
+          return (
+            d.getDate() + " " + bulan[d.getMonth()] + " " + d.getFullYear()
+          );
+        }
+
+        /* ---------------- Sidebar collapse / mobile drawer ---------------- */
+        var railEl = document.getElementById("rail");
+        var railToggle = document.getElementById("railToggle");
+        var mobileToggle = document.getElementById("mobileToggle");
+        var mobileBackdrop = document.getElementById("mobileBackdrop");
+        function isMobileView() {
+          return window.matchMedia("(max-width:900px)").matches;
+        }
+        function closeMobileRail() {
+          railEl.classList.remove("mobile-open");
+          mobileBackdrop.classList.remove("show");
+        }
+        function openMobileRail() {
+          railEl.classList.add("mobile-open");
+          mobileBackdrop.classList.add("show");
+        }
+        railToggle.addEventListener("click", function () {
+          var collapsed = railEl.classList.toggle("collapsed");
+          try {
+            localStorage.setItem(
+              "kartu-ujian-rail-collapsed",
+              collapsed ? "1" : "0",
+            );
+          } catch (e) {}
+          setTimeout(function () {
+            if (state.step === 3) fitScale();
+          }, 210);
+        });
+        mobileToggle.addEventListener("click", function () {
+          if (railEl.classList.contains("mobile-open")) closeMobileRail();
+          else openMobileRail();
+        });
+        mobileBackdrop.addEventListener("click", closeMobileRail);
+        try {
+          if (
+            localStorage.getItem("kartu-ujian-rail-collapsed") === "1" &&
+            !isMobileView()
+          ) {
+            railEl.classList.add("collapsed");
+          }
+        } catch (e) {}
+
+        /* ---------------- Sidebar / navigation ---------------- */
+        var stepButtons = document.querySelectorAll(".step-btn");
+        function setStep(n, opts) {
+          opts = opts || {};
+          if (n === 2 && state.students.length === 0 && !opts.force) {
+            n = 2;
+          } // allowed but shows empty state
+          if (n === 3 && state.students.length === 0) return; // block
+          state.step = n;
+          document.querySelectorAll(".step-panel").forEach(function (p, i) {
+            p.style.display = i + 1 === n ? "" : "none";
+          });
+          stepButtons.forEach(function (b) {
+            var s = parseInt(b.getAttribute("data-step"), 10);
+            b.classList.toggle("active", s === n);
+            b.classList.toggle("done", s < n);
+            var unlocked =
+              s === 1 || s === 2 || (s === 3 && state.students.length > 0);
+            b.classList.toggle("locked", !unlocked);
+          });
+          if (n === 1) renderPreviewCard();
+          if (n === 3) {
+            renderSheetTabs();
+            renderCurrentSheet();
+            updateSheetInfo();
+          }
+          window.scrollTo(0, 0);
+        }
+        stepButtons.forEach(function (b) {
+          b.addEventListener("click", function () {
+            var s = parseInt(b.getAttribute("data-step"), 10);
+            if (b.classList.contains("locked")) return;
+            setStep(s);
+            if (isMobileView()) closeMobileRail();
+          });
+        });
+        document.querySelectorAll("[data-goto]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            setStep(parseInt(b.getAttribute("data-goto"), 10));
+          });
+        });
+
+        /* ---------------- Step 1: settings form ---------------- */
+        var f = {
+          examTitle: document.getElementById("examTitle"),
+          schoolName: document.getElementById("schoolName"),
+          schoolYear: document.getElementById("schoolYear"),
+          cardCity: document.getElementById("cardCity"),
+          cardDate: document.getElementById("cardDate"),
+          principalName: document.getElementById("principalName"),
+          principalNip: document.getElementById("principalNip"),
+        };
+        function loadFormFromState() {
+          f.examTitle.value = state.settings.examTitle;
+          f.schoolName.value = state.settings.schoolName;
+          f.schoolYear.value = state.settings.schoolYear;
+          f.cardCity.value = state.settings.cardCity;
+          f.cardDate.value = state.settings.cardDate;
+          f.principalName.value = state.settings.principalName;
+          f.principalNip.value = state.settings.principalNip;
+          updateThumb("logo");
+          updateThumb("sign");
+        }
+        Object.keys(f).forEach(function (key) {
+          f[key].addEventListener("input", function () {
+            state.settings[key] = f[key].value;
+            renderPreviewCard();
+            persist();
+          });
+        });
+
+        function readFileAsDataURL(file, cb) {
+          var reader = new FileReader();
+          reader.onload = function () {
+            cb(reader.result);
+          };
+          reader.readAsDataURL(file);
+        }
+        function updateThumb(kind) {
+          var thumb = document.getElementById(kind + "Thumb");
+          var clearBtn = document.getElementById(kind + "Clear");
+          var val =
+            kind === "logo" ? state.settings.logo : state.settings.signature;
+          if (val) {
+            thumb.innerHTML = '<img src="' + val + '" alt="">';
+            clearBtn.style.display = "";
+          } else {
+            clearBtn.style.display = "none";
+          }
+        }
+        ["logo", "sign"].forEach(function (kind) {
+          var input = document.getElementById(kind + "Input");
+          var clearBtn = document.getElementById(kind + "Clear");
+          input.addEventListener("change", function (e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            readFileAsDataURL(file, function (dataUrl) {
+              if (kind === "logo") state.settings.logo = dataUrl;
+              else state.settings.signature = dataUrl;
+              updateThumb(kind);
+              renderPreviewCard();
+              persist();
+            });
+          });
+          clearBtn.addEventListener("click", function (e) {
+            e.preventDefault();
+            if (kind === "logo") state.settings.logo = null;
+            else state.settings.signature = null;
+            input.value = "";
+            updateThumb(kind);
+            renderPreviewCard();
+            persist();
+          });
+        });
+
+        document
+          .getElementById("toStep2")
+          .addEventListener("click", function () {
+            setStep(2);
+          });
+
+        /* ---------------- Card markup builders ---------------- */
+        function logoSvgFallback() {
+          return '<svg viewBox="0 0 24 24" fill="none"><path d="M12 2 3 6.5v5.3C3 16.9 6.9 21 12 22c5.1-1 9-5.1 9-10.2V6.5L12 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12.2l2 2 4-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        }
+
+        function watermarkHTML(logo) {
+          return logo
+            ? '<div class="card-watermark"><img src="' +
+                logo +
+                '" alt=""></div>'
+            : "";
+        }
+
+        function cardFrontHTML(student, qrId) {
+          var s = state.settings;
+          var school =
+            student && student.sekolah ? student.sekolah : s.schoolName;
+          return (
+            "" +
+            '<div class="id-card front">' +
+            '<div class="band"></div>' +
+            watermarkHTML(s.logo) +
+            '<div class="card-pad">' +
+            '<div class="card-header">' +
+            '<div class="card-logo">' +
+            (s.logo ? '<img src="' + s.logo + '" alt="">' : logoSvgFallback()) +
+            "</div>" +
+            '<div class="card-titles">' +
+            '<div class="title-fixed">Kartu Peserta</div>' +
+            '<div class="title-main">' +
+            esc(s.examTitle) +
+            "</div>" +
+            '<div class="title-school">' +
+            esc(school) +
+            "</div>" +
+            '<div class="title-year">Tahun Pelajaran ' +
+            esc(s.schoolYear) +
+            "</div>" +
+            "</div>" +
+            '<div class="card-qr" id="' +
+            qrId +
+            '"></div>' +
+            "</div>" +
+            '<div class="card-divider"></div>' +
+            '<div class="card-body">' +
+            '<div class="lbl">No Peserta</div><div class="val">' +
+            esc(student ? student.noPeserta : "2026-001-001") +
+            "</div>" +
+            '<div class="lbl">Nama</div><div class="val name">' +
+            esc(student ? student.nama : "Nama Peserta") +
+            "</div>" +
+            '<div class="lbl">NISN</div><div class="val">' +
+            esc(student ? student.nisn : "00xxxxxxxx") +
+            "</div>" +
+            '<div class="lbl">Tempat, Tgl Lahir</div><div class="val">' +
+            esc(student ? student.ttl : "-") +
+            "</div>" +
+            '<div class="lbl">Kelas</div><div class="val">' +
+            esc(student ? student.kelas : "-") +
+            "</div>" +
+            '<div class="lbl">Jenis Kelamin</div><div class="val">' +
+            esc(student ? student.jk : "-") +
+            "</div>" +
+            "</div>" +
+            '<div class="card-foot">' +
+            '<div class="sign-block">' +
+            '<div class="place-date">' +
+            esc(s.cardCity) +
+            ", " +
+            esc(fmtDate(s.cardDate)) +
+            "</div>" +
+            '<div class="role">Kepala Sekolah,</div>' +
+            '<div class="sign-img">' +
+            (s.signature ? '<img src="' + s.signature + '" alt="">' : "") +
+            "</div>" +
+            '<div class="name">' +
+            esc(s.principalName || "(...........................)") +
+            "</div>" +
+            (s.principalNip
+              ? '<div class="nip">NIY. ' + esc(s.principalNip) + "</div>"
+              : "") +
+            "</div>" +
+            "</div>" +
+            "</div>" +
+            "</div>"
+          );
+        }
+
+        function cardBackHTML(student) {
+          var s = state.settings;
+          var idLine = student
+            ? esc(student.noPeserta) + " &middot; " + esc(student.nama)
+            : "2026-001-001 &middot; Nama Peserta";
+          var thead =
+            '<tr><td class="sesi-col"></td>' +
+            DAYS.map(function (d) {
+              return "<th>" + d + "</th>";
+            }).join("") +
+            "</tr>";
+          var rows = SESSIONS.map(function (sname) {
+            return (
+              '<tr><td class="sesi-col">' +
+              sname +
+              "</td>" +
+              DAYS.map(function () {
+                return "<td></td>";
+              }).join("") +
+              "</tr>"
+            );
+          }).join("");
+          return (
+            "" +
+            '<div class="id-card back">' +
+            '<div class="band"></div>' +
+            watermarkHTML(s.logo) +
+            '<div class="card-pad">' +
+            '<div class="back-title">Tabel Paraf Pengawas Ujian</div>' +
+            '<div class="back-sub">' +
+            idLine +
+            "</div>" +
+            '<table class="paraf-table"><thead>' +
+            thead +
+            "</thead><tbody>" +
+            rows +
+            "</tbody></table>" +
+            '<div class="back-note">Peserta wajib meminta paraf pengawas setiap sesi ujian berlangsung.</div>' +
+            "</div>" +
+            "</div>"
+          );
+        }
+
+        var preview1Flipped = false;
+        function renderPreviewCard() {
+          var mount = document.getElementById("previewCard1");
+          var sample = state.students[0] || null;
+          var qrId = "qrPreview1";
+          mount.innerHTML = preview1Flipped
+            ? cardBackHTML(sample)
+            : cardFrontHTML(sample, qrId);
+          if (!preview1Flipped)
+            drawQR(qrId, sample ? sample.noPeserta : "2026-001-001");
+        }
+        document.getElementById("flip1").addEventListener("click", function () {
+          preview1Flipped = !preview1Flipped;
+          this.textContent = preview1Flipped
+            ? "Lihat bagian depan"
+            : "Lihat bagian belakang";
+          renderPreviewCard();
+        });
+
+        function drawQR(elId, text) {
+          var el = document.getElementById(elId);
+          if (!el) return;
+          el.innerHTML = "";
+          try {
+            new QRCode(el, {
+              text: String(text || ""),
+              width: 90,
+              height: 90,
+              correctLevel: QRCode.CorrectLevel.M,
+            });
+          } catch (e) {
+            /* library not ready */
+          }
+        }
+
+        /* ---------------- Step 2: excel template + upload ---------------- */
+        var TEMPLATE_HEADERS = [
+          "No Peserta",
+          "Nama Lengkap",
+          "NISN",
+          "Tempat Tanggal Lahir",
+          "Jenis Kelamin",
+          "Kelas",
+          "Sekolah",
+        ];
+        var TEMPLATE_ROWS = [
+          [
+            "2026-001-001",
+            "Ahmad Fauzan Ramadhan",
+            "0051234567",
+            "Jakarta, 12 Mei 2008",
+            "Laki-laki",
+            "XII IPA 1",
+            "SMA Negeri 1 Contoh",
+          ],
+          [
+            "2026-001-002",
+            "Siti Nur Aisyah",
+            "0059876543",
+            "Bandung, 23 Agustus 2008",
+            "Perempuan",
+            "XII IPA 1",
+            "SMA Negeri 1 Contoh",
+          ],
+          [
+            "2026-001-003",
+            "Muhammad Rizky Pratama",
+            "0052345678",
+            "Surabaya, 7 Januari 2008",
+            "Laki-laki",
+            "XII IPS 2",
+            "SMA Negeri 1 Contoh",
+          ],
+        ];
+        document
+          .getElementById("downloadTemplate")
+          .addEventListener("click", function () {
+            var ws = XLSX.utils.aoa_to_sheet(
+              [TEMPLATE_HEADERS].concat(TEMPLATE_ROWS),
+            );
+            ws["!cols"] = [
+              { wch: 14 },
+              { wch: 24 },
+              { wch: 14 },
+              { wch: 24 },
+              { wch: 13 },
+              { wch: 12 },
+              { wch: 22 },
+            ];
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Data Peserta");
+            XLSX.writeFile(wb, "template-data-peserta.xlsx");
+          });
+
+        var HEADER_MAP = {
+          nopeserta: "noPeserta",
+          "no peserta": "noPeserta",
+          nomorpeserta: "noPeserta",
+          nourutpeserta: "noPeserta",
+          namalengkap: "nama",
+          nama: "nama",
+          nisn: "nisn",
+          tempattanggallahir: "ttl",
+          tempatdantanggallahir: "ttl",
+          ttl: "ttl",
+          "tempat tanggal lahir": "ttl",
+          jeniskelamin: "jk",
+          jk: "jk",
+          kelas: "kelas",
+          sekolah: "sekolah",
+          namasekolah: "sekolah",
+        };
+        function normalizeHeader(h) {
+          return String(h || "")
+            .toLowerCase()
+            .replace(/[^a-z]/g, "");
+        }
+        function parseWorkbook(wb) {
+          var sheetName = wb.SheetNames[0];
+          var sheet = wb.Sheets[sheetName];
+          var rows = XLSX.utils.sheet_to_json(sheet, {
+            header: 1,
+            blankrows: false,
+            defval: "",
+          });
+          if (!rows.length) return [];
+          var headerRow = rows[0];
+          var colMap = {}; // index -> field
+          headerRow.forEach(function (h, idx) {
+            var norm = normalizeHeader(h);
+            if (HEADER_MAP[norm]) colMap[idx] = HEADER_MAP[norm];
+          });
+          var out = [];
+          for (var i = 1; i < rows.length; i++) {
+            var r = rows[i];
+            if (
+              !r ||
+              r.every(function (c) {
+                return String(c).trim() === "";
+              })
+            )
+              continue;
+            var obj = {
+              noPeserta: "",
+              nama: "",
+              nisn: "",
+              ttl: "",
+              jk: "",
+              kelas: "",
+              sekolah: "",
+            };
+            Object.keys(colMap).forEach(function (idxStr) {
+              var idx = parseInt(idxStr, 10);
+              obj[colMap[idx]] =
+                r[idx] !== undefined && r[idx] !== null
+                  ? String(r[idx]).trim()
+                  : "";
+            });
+            if (obj.nama || obj.noPeserta) out.push(obj);
+          }
+          return out;
+        }
+
+        var excelInput = document.getElementById("excelInput");
+        var dropzone = document.getElementById("dropzone");
+        var uploadStatus = document.getElementById("uploadStatus");
+        var dzFileName = document.getElementById("dzFileName");
+
+        function handleExcelFile(file) {
+          if (!file) return;
+          dzFileName.textContent = file.name;
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            try {
+              var data = new Uint8Array(e.target.result);
+              var wb = XLSX.read(data, { type: "array" });
+              var students = parseWorkbook(wb);
+              if (!students.length) {
+                showUploadStatus(
+                  false,
+                  "Tidak ada data yang terbaca. Pastikan file sesuai format template (baris pertama berisi judul kolom).",
+                );
+                return;
+              }
+              state.students = students;
+              showUploadStatus(
+                true,
+                students.length +
+                  ' data peserta berhasil dibaca dari "' +
+                  file.name +
+                  '".',
+              );
+              renderDataTable();
+              document.getElementById("toStep3").disabled = false;
+              persist();
+            } catch (err) {
+              showUploadStatus(
+                false,
+                "Gagal membaca file. Pastikan formatnya .xlsx, .xls, atau .csv sesuai template.",
+              );
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        }
+        function showUploadStatus(ok, msg) {
+          uploadStatus.innerHTML =
+            '<div class="status-banner ' +
+            (ok ? "ok" : "err") +
+            '">' +
+            (ok ? "✓ " : "⚠ ") +
+            esc(msg) +
+            "</div>";
+        }
+        excelInput.addEventListener("change", function (e) {
+          handleExcelFile(e.target.files[0]);
+        });
+        ["dragover", "dragenter"].forEach(function (evt) {
+          dropzone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            dropzone.classList.add("drag");
+          });
+        });
+        ["dragleave", "drop"].forEach(function (evt) {
+          dropzone.addEventListener(evt, function (e) {
+            e.preventDefault();
+            dropzone.classList.remove("drag");
+          });
+        });
+        dropzone.addEventListener("drop", function (e) {
+          var file = e.dataTransfer.files[0];
+          if (file) {
+            excelInput.files = e.dataTransfer.files;
+            handleExcelFile(file);
+          }
+        });
+
+        function renderDataTable() {
+          var wrap = document.getElementById("dataSummary");
+          var tbody = document.getElementById("dataTableBody");
+          if (!state.students.length) {
+            wrap.style.display = "none";
+            return;
+          }
+          wrap.style.display = "";
+          document.getElementById("pillCount").textContent =
+            state.students.length;
+          document.getElementById("pillSheets").textContent = Math.ceil(
+            state.students.length / 6,
+          );
+          tbody.innerHTML = state.students
+            .map(function (st, i) {
+              return (
+                "<tr><td>" +
+                (i + 1) +
+                "</td><td>" +
+                esc(st.noPeserta) +
+                '</td><td class="name-cell">' +
+                esc(st.nama) +
+                "</td><td>" +
+                esc(st.nisn) +
+                "</td><td>" +
+                esc(st.ttl) +
+                "</td><td>" +
+                esc(st.jk) +
+                "</td><td>" +
+                esc(st.kelas) +
+                "</td><td>" +
+                esc(st.sekolah || state.settings.schoolName) +
+                "</td></tr>"
+              );
+            })
+            .join("");
+        }
+        if (state.students.length) {
+          renderDataTable();
+          dzFileName.textContent =
+            state.students.length + " data tersimpan dari sesi sebelumnya";
+          document.getElementById("toStep3").disabled = false;
+        }
+        document
+          .getElementById("toStep3")
+          .addEventListener("click", function () {
+            if (state.students.length) setStep(3);
+          });
+
+        /* ---------------- Step 3: print setup ---------------- */
+        var pMarginTop = document.getElementById("marginTop");
+        var pMarginLeft = document.getElementById("marginLeft");
+        var pGapX = document.getElementById("gapX");
+        var pGapY = document.getElementById("gapY");
+        var mirrorToggle = document.getElementById("mirrorToggle");
+
+        function loadPrintForm() {
+          pMarginTop.value = state.print.marginTop;
+          pMarginLeft.value = state.print.marginLeft;
+          pGapX.value = state.print.gapX;
+          pGapY.value = state.print.gapY;
+          mirrorToggle.classList.toggle("on", state.print.mirrorBack);
+        }
+        [
+          ["marginTop", pMarginTop],
+          ["marginLeft", pMarginLeft],
+          ["gapX", pGapX],
+          ["gapY", pGapY],
+        ].forEach(function (pair) {
+          pair[1].addEventListener("input", function () {
+            var v = parseFloat(pair[1].value);
+            state.print[pair[0]] = isNaN(v) ? 0 : v;
+            renderCurrentSheet();
+            updateSheetInfo();
+            persist();
+          });
+        });
+        mirrorToggle.addEventListener("click", function () {
+          state.print.mirrorBack = !state.print.mirrorBack;
+          mirrorToggle.classList.toggle("on", state.print.mirrorBack);
+          renderCurrentSheet();
+          persist();
+        });
+        document
+          .getElementById("centerLayout")
+          .addEventListener("click", function () {
+            state.print.marginLeft = +(
+              (21 - 2 * 9.7 - state.print.gapX) /
+              2
+            ).toFixed(2);
+            state.print.marginTop = +(
+              (29.7 - 3 * 8 - 2 * state.print.gapY) /
+              2
+            ).toFixed(2);
+            loadPrintForm();
+            renderCurrentSheet();
+            updateSheetInfo();
+            persist();
+          });
+
+        function updateSheetInfo() {
+          var p = state.print;
+          var usedW = 2 * 9.7 + p.gapX;
+          var usedH = 3 * 8 + 2 * p.gapY;
+          var rightMargin = 21 - p.marginLeft - usedW;
+          var bottomMargin = 29.7 - p.marginTop - usedH;
+          var el = document.getElementById("sheetInfo");
+          var warn = rightMargin < -0.05 || bottomMargin < -0.05;
+          el.innerHTML =
+            "Total lebar 6 kartu: <b>" +
+            usedW.toFixed(2) +
+            " cm</b> dari 21 cm &middot; total tinggi: <b>" +
+            usedH.toFixed(2) +
+            " cm</b> dari 29.7 cm." +
+            (warn
+              ? '<br><span style="color:#b3261e;font-weight:600;">⚠ Melebihi ukuran kertas A4 — kurangi margin atau jarak.</span>'
+              : "<br>Sisa margin kanan " +
+                rightMargin.toFixed(2) +
+                " cm, margin bawah " +
+                bottomMargin.toFixed(2) +
+                " cm.");
+        }
+
+        var currentSheetIdx = 0; // which group of 6
+        var currentSide = "front"; // 'front' | 'back'
+        function totalSheets() {
+          return Math.max(1, Math.ceil(state.students.length / 6));
+        }
+
+        function renderSheetTabs() {
+          var wrap = document.getElementById("sheetTabs");
+          var n = totalSheets();
+          var html = "";
+          for (var i = 0; i < n; i++) {
+            html +=
+              '<button class="sheet-tab" data-idx="' +
+              i +
+              '" data-side="front">Lembar ' +
+              (i + 1) +
+              " — Depan</button>";
+            html +=
+              '<button class="sheet-tab" data-idx="' +
+              i +
+              '" data-side="back">Lembar ' +
+              (i + 1) +
+              " — Belakang</button>";
+          }
+          wrap.innerHTML = html;
+          updateTabActive();
+          wrap.querySelectorAll(".sheet-tab").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              currentSheetIdx = parseInt(btn.getAttribute("data-idx"), 10);
+              currentSide = btn.getAttribute("data-side");
+              updateTabActive();
+              renderCurrentSheet();
+            });
+          });
+        }
+        function updateTabActive() {
+          document.querySelectorAll(".sheet-tab").forEach(function (btn) {
+            var active =
+              parseInt(btn.getAttribute("data-idx"), 10) === currentSheetIdx &&
+              btn.getAttribute("data-side") === currentSide;
+            btn.classList.toggle("active", active);
+          });
+        }
+
+        function studentsForSheet(idx) {
+          return state.students.slice(idx * 6, idx * 6 + 6);
+        }
+
+        function buildSheetElement(idx, side, forPrint) {
+          var p = state.print;
+          var list = studentsForSheet(idx);
+          while (list.length < 6) list.push(null);
+
+          var order = [0, 1, 2, 3, 4, 5];
+          if (side === "back" && p.mirrorBack) {
+            order = [1, 0, 3, 2, 5, 4]; // swap columns within each row
+          }
+
+          var sheet = document.createElement("div");
+          sheet.className = "a4-sheet";
+          var grid = document.createElement("div");
+          grid.className = "cards-grid";
+          grid.style.left = p.marginLeft + "cm";
+          grid.style.top = p.marginTop + "cm";
+          grid.style.columnGap = p.gapX + "cm";
+          grid.style.rowGap = p.gapY + "cm";
+
+          for (var pos = 0; pos < 6; pos++) {
+            var srcIdx = order[pos];
+            var student = list[srcIdx];
+            var cell = document.createElement("div");
+            cell.className = "cell" + (student ? "" : " empty");
+            var qrId =
+              "qr_s" +
+              idx +
+              "_" +
+              side +
+              "_" +
+              pos +
+              "_" +
+              (forPrint ? "p" : "v") +
+              "_" +
+              qrSeq++;
+            cell.innerHTML =
+              side === "front"
+                ? cardFrontHTML(student, qrId)
+                : cardBackHTML(student);
+            grid.appendChild(cell);
+            if (side === "front") {
+              (function (qid, st) {
+                setTimeout(function () {
+                  drawQR(qid, st ? st.noPeserta : "");
+                }, 0);
+              })(qrId, student);
+            }
+          }
+          sheet.appendChild(grid);
+          return sheet;
+        }
+
+        function renderCurrentSheet() {
+          var mount = document.getElementById("sheetPreviewMount");
+          mount.innerHTML = "";
+          var sheetEl = buildSheetElement(currentSheetIdx, currentSide, false);
+          mount.appendChild(sheetEl);
+          fitScale();
+        }
+        function fitScale() {
+          var outer = document.getElementById("scaleWrap");
+          var sheet = outer.querySelector(".a4-sheet");
+          if (!sheet) return;
+          var availW = outer.clientWidth || 600;
+          var pxPerCm = 37.795;
+          var sheetPxW = 21 * pxPerCm;
+          var scale = Math.min(1, (availW - 4) / sheetPxW);
+          sheet.style.transform = "scale(" + scale + ")";
+          outer.style.height = 29.7 * pxPerCm * scale + "px";
+        }
+        window.addEventListener("resize", function () {
+          if (state.step === 3) fitScale();
+        });
+
+        /* ---------------- Print ---------------- */
+        document
+          .getElementById("printBtn")
+          .addEventListener("click", function () {
+            var root = document.getElementById("printRoot");
+            root.innerHTML = "";
+            var sheetEl = buildSheetElement(currentSheetIdx, currentSide, true);
+            sheetEl.style.transform = "none";
+            root.appendChild(sheetEl);
+            setTimeout(function () {
+              window.print();
+            }, 60);
+          });
+
+        /* ---------------- PDF export ---------------- */
+        var pdfProgressEl = document.getElementById("pdfProgress");
+        var pdfBtnAll = document.getElementById("downloadPdfAllBtn");
+        var pdfBtnOne = document.getElementById("downloadPdfOneBtn");
+        var pdfCaptureZone = document.getElementById("pdfCaptureZone");
+
+        function setPdfBusy(busy, label) {
+          [pdfBtnAll, pdfBtnOne, document.getElementById("printBtn")].forEach(
+            function (b) {
+              b.disabled = busy;
+            },
+          );
+          if (busy) {
+            pdfProgressEl.style.display = "flex";
+            pdfProgressEl.innerHTML =
+              '<div class="spin"></div><span>' +
+              esc(label || "Menyiapkan PDF...") +
+              "</span>";
+          } else {
+            pdfProgressEl.style.display = "none";
+          }
+        }
+
+        function waitFrames(n) {
+          return new Promise(function (resolve) {
+            function step(k) {
+              if (k <= 0) return resolve();
+              requestAnimationFrame(function () {
+                step(k - 1);
+              });
+            }
+            step(n);
+          });
+        }
+
+        function captureSheetToImage(idx, side) {
+          return new Promise(function (resolve, reject) {
+            pdfCaptureZone.innerHTML = "";
+            var sheetEl = buildSheetElement(idx, side, true);
+            sheetEl.style.transform = "none";
+            sheetEl.style.boxShadow = "none";
+            sheetEl.style.margin = "0";
+            pdfCaptureZone.appendChild(sheetEl);
+            // give QR codes + images time to paint before rasterizing
+            waitFrames(3)
+              .then(function () {
+                return new Promise(function (r) {
+                  setTimeout(r, 180);
+                });
+              })
+              .then(function () {
+                return html2canvas(sheetEl, {
+                  scale: 2.5,
+                  backgroundColor: "#ffffff",
+                  useCORS: true,
+                  logging: false,
+                  width: sheetEl.offsetWidth,
+                  height: sheetEl.offsetHeight,
+                });
+              })
+              .then(function (canvas) {
+                pdfCaptureZone.innerHTML = "";
+                resolve(canvas.toDataURL("image/jpeg", 0.95));
+              })
+              .catch(function (err) {
+                pdfCaptureZone.innerHTML = "";
+                reject(err);
+              });
+          });
+        }
+
+        function generatePdf(jobs, filename) {
+          if (!jobs.length) return;
+          setPdfBusy(true, "Menyiapkan PDF... (0/" + jobs.length + ")");
+          var jspdfNS = window.jspdf;
+          if (!jspdfNS || !jspdfNS.jsPDF) {
+            setPdfBusy(false);
+            alert(
+              "Modul PDF belum siap dimuat. Silakan coba lagi sesaat lagi.",
+            );
+            return;
+          }
+          var doc = new jspdfNS.jsPDF({
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait",
+          });
+          var chain = Promise.resolve();
+          jobs.forEach(function (job, i) {
+            chain = chain
+              .then(function () {
+                pdfProgressEl.innerHTML =
+                  '<div class="spin"></div><span>Merender ' +
+                  esc(job.label) +
+                  "... (" +
+                  (i + 1) +
+                  "/" +
+                  jobs.length +
+                  ")</span>";
+                return captureSheetToImage(job.idx, job.side);
+              })
+              .then(function (imgData) {
+                if (i > 0) doc.addPage("a4", "portrait");
+                doc.addImage(
+                  imgData,
+                  "JPEG",
+                  0,
+                  0,
+                  210,
+                  297,
+                  undefined,
+                  "FAST",
+                );
+              });
+          });
+          chain
+            .then(function () {
+              doc.save(filename);
+              setPdfBusy(false);
+            })
+            .catch(function (err) {
+              setPdfBusy(false);
+              alert(
+                "Gagal membuat PDF. Coba lagi, atau gunakan tombol Cetak sebagai alternatif.",
+              );
+            });
+        }
+
+        pdfBtnAll.addEventListener("click", function () {
+          var n = totalSheets();
+          var jobs = [];
+          for (var i = 0; i < n; i++)
+            jobs.push({
+              idx: i,
+              side: "front",
+              label: "lembar " + (i + 1) + " depan",
+            });
+          for (var j = 0; j < n; j++)
+            jobs.push({
+              idx: j,
+              side: "back",
+              label: "lembar " + (j + 1) + " belakang",
+            });
+          generatePdf(jobs, "kartu-peserta-ujian.pdf");
+        });
+        pdfBtnOne.addEventListener("click", function () {
+          var jobs = [
+            {
+              idx: currentSheetIdx,
+              side: currentSide,
+              label:
+                "lembar " +
+                (currentSheetIdx + 1) +
+                " " +
+                (currentSide === "front" ? "depan" : "belakang"),
+            },
+          ];
+          generatePdf(
+            jobs,
+            "kartu-peserta-ujian-lembar-" +
+              (currentSheetIdx + 1) +
+              "-" +
+              currentSide +
+              ".pdf",
+          );
+        });
+
+        /* ---------------- Init ---------------- */
+        loadFormFromState();
+        loadPrintForm();
+        renderPreviewCard();
+        renderDataTable();
+        setStep(1);
+      })();
+    </script>
+  </body>
+</html>
